@@ -7,6 +7,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from urllib import parse
+from utils import generate_qr_code
 
 app = Sanic(__name__)
 app.config.update_config("./.env")
@@ -16,10 +17,6 @@ app.config.update_config("./.env")
 async def set_up_db(app, loop):
     app.ctx.mdb = AsyncIOMotorClient(app.config.URI_MONGO)[app.config.DB_MONGO]
     app.ctx.aio_request = aiohttp.ClientSession(loop=loop)
-
-
-@app.listener("after_server_start")
-async def set_up_task(app, loop):
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
@@ -30,6 +27,12 @@ async def set_up_task(app, loop):
     # driver = webdriver.Chrome(options=chrome_options)
     driver = webdriver.Chrome(service=Service(), options=chrome_options)
     app.ctx.chrome_driver = driver
+    print("Started!")
+
+
+@app.listener("after_server_start")
+async def set_up_task(app, loop):
+    pass
 
 
 @app.route("/health_check", methods=["GET"])
@@ -87,6 +90,11 @@ async def search(req):
             avg_rating = avg_rating_tag.text if avg_rating_tag else ""
             total_rating = total_rating_tag.text if total_rating_tag else ""
             price = price_tag.text if price_tag else ""
+            href_value = ""
+            href_tag = result.find('a', attrs={'jsname': 'UWckNb'})
+            if href_tag:
+                href_value = href_tag.get('href')
+
             if title:
                 lst_out.append({
                     "title": title,
@@ -94,7 +102,9 @@ async def search(req):
                     "img": img,
                     "avg_rating": avg_rating,
                     "total_ratign": total_rating,
-                    "price": price
+                    "price": price,
+                    "href_value": href_value,
+                    "qrcode": generate_qr_code(href_value) if href_value else "",
                 })
 
         return response.json({"data": lst_out})
@@ -104,6 +114,6 @@ async def search(req):
 
 
 if __name__ == "__main__":
-    print("start!")
-    app.run(host="0.0.0.0", port=app.config.PORT, workers=app.config.WORKER, debug=app.config.DEBUG, access_log=app.config.ACCESS_LOG,
+    app.run(host="0.0.0.0", port=app.config.PORT, workers=app.config.WORKER, debug=app.config.DEBUG,
+            access_log=app.config.ACCESS_LOG,
             auto_reload=True)

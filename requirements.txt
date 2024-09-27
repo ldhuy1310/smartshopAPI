@@ -9,3 +9,5 @@ redis==5.0.8
 python-dotenv==1.0.1
 beautifulsoup4==4.12.3
 selenium==4.25.0
+segno==1.6.1
+pillow==10.4.0
