@@ -105,5 +105,5 @@ async def search(req):
 
 if __name__ == "__main__":
     print("start!")
-    app.run(host="0.0.0.0", port=app.config.PORT, workers=2, debug=app.config.DEBUG, access_log=app.config.ACCESS_LOG,
+    app.run(host="0.0.0.0", port=app.config.PORT, workers=app.config.WORKER, debug=app.config.DEBUG, access_log=app.config.ACCESS_LOG,
             auto_reload=True)
