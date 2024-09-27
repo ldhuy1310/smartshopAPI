@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sanic_api
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://db:27017/smart_shop
+    #    depends_on:
+    #      - db
+    volumes:
+      - ./:/app
+#    command: python app.py run
+    command: >
+      bash -c "python init_db.py && python app.py"
+
+  db:
+    image: mongo:latest
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/db:/data/db
+
+
+volumes:
+  mongo-data:
+    driver: local
