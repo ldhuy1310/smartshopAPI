@@ -1,8 +1,10 @@
 import base64
+from datetime import datetime
 from io import BytesIO
 from PIL import Image, ImageDraw
-
 import segno
+import unicodedata
+import re
 
 
 def add_corners(im, rad):
@@ -31,3 +33,35 @@ def generate_qr_code(data, corner_radius=16, scale=8, border=2):
     except Exception as ex:
         print(str(ex))
         return ""
+
+
+def remove_vietnamese_accents(text):
+    text = unicodedata.normalize('NFKD', text)
+    text = text.encode('ASCII', 'ignore').decode('utf-8')
+    text = re.sub(r'[^\w\s]', '', text)
+    return text.lower().replace(" ", "-")
+
+
+async def task_insert_data_crawled(req, keyword, items):
+    try:
+        for i in items:
+            doc = {
+                "id": i["id"],
+                "title": i["title"],
+                "description": i["description"],
+                "img": i["img"],
+                "avg_rating": i["avg_rating"],
+                "total_rating": i["total_rating"],
+                "price": i["price"],
+                "href_value": i["href_value"],
+                "qrcode": i["qrcode"],
+                "e_commerce_platform": i["e_commerce_platform"],
+                "time_crawled": datetime.now(),
+                "keyword": [keyword],
+            }
+            await req.app.ctx.mdb.smart_shop.update_one(
+                {"id": i["id"]},
+                {"$set": doc})
+            # await req.app.ctx.mdb.smart_shop.insert_one(doc)
+    except Exception as ex:
+        print(str(ex))

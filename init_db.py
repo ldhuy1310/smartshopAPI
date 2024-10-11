@@ -1,12 +1,14 @@
+import os
 from pymongo import MongoClient
+from dotenv import load_dotenv
 
-# Kết nối tới MongoDB
-client = MongoClient('mongodb://db:27017/')
+load_dotenv()
 
-# Kết nối tới database 'mydatabase'
-db = client['mydatabase']
+URI_MONGO = os.getenv("URI_MONGO", "mongodb://db:27017/")
+DB_MONGO = os.getenv("DB_MONGO", "smart_shop")
+client = MongoClient(URI_MONGO)
+db = client[DB_MONGO]
 
-# Tạo collection 'smart_shop' nếu chưa tồn tại
 if 'smart_shop' not in db.list_collection_names():
     db.create_collection('smart_shop')
     print("Collection 'smart_shop' created.")

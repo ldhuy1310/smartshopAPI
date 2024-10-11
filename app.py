@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from bs4 import BeautifulSoup
+from bson import ObjectId
 from sanic import Sanic, response
 from motor.motor_asyncio import AsyncIOMotorClient
 import aiohttp
@@ -7,7 +8,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from urllib import parse
-from utils import generate_qr_code
+from utils import generate_qr_code, task_insert_data_crawled, remove_vietnamese_accents
 
 app = Sanic(__name__)
 app.config.update_config("./.env")
@@ -40,42 +41,57 @@ async def health_check(req):
     return response.json({"status": "OK"})
 
 
-@app.route("/count", methods=["GET"])
+@app.route("/products", methods=["GET"])
 async def count(req):
     try:
-        count = await req.app.ctx.mdb.smart_shop.count_documents({})
-        return response.json({"count": count})
+        lst = []
+        async for i in req.app.ctx.mdb.smart_shop.find().sort([("time_crawled", -1)]):
+            i["_id"] = str(i["_id"])
+            if "time_crawled" in i:
+                i["time_crawled"] = str(i["time_crawled"])
+            lst.append(i)
+        return response.json(lst)
     except Exception as ex:
         return response.json({"Error": str(ex)})
 
 
-#
-# @app.route("/insert", methods=["GET"])
-# async def insert(req):
-#     try:
-#         pass
-#         # await req.app.ctx.mdb.smart_shop.insert_one(})
-#     except Exception as ex:
-#         return response.json({"Error": str(ex)})
-
-
-def get_url(keyword):
-    keyword = keyword.replace(' ', '%20').replace("#", "%23")
-    template = f"https://www.google.com/search?q={keyword}&tbm=shop&tbs=p_ord:r"
-    url = template.format(keyword)
-    return url
+@app.route("/products/<id>", methods=["DELETE"])
+async def del_product(req, id):
+    try:
+        res = await req.app.ctx.mdb.smart_shop.delete_one({'_id': ObjectId(id)})
+        return response.json(res.deleted_count)
+    except Exception as ex:
+        return response.json({"Error": str(ex)})
 
 
 @app.route('/search')
 async def search(req):
     try:
-        key_search = "shopee " + req.args.get("q", "fptplay box")
+        keyword = req.args.get("q", "fptplay box")
+        lst_out = []
+        async for i in req.app.ctx.mdb.smart_shop.find({"keyword": remove_vietnamese_accents(keyword)}).sort(
+                [("time_crawled", -1)]).limit(50):
+            lst_out.append({
+                "id": i["id"],
+                "title": i["title"],
+                "description": i["description"],
+                "img": i["img"],
+                "avg_rating": i["avg_rating"],
+                "total_rating": i["total_rating"],
+                "price": i["price"],
+                "href_value": i["href_value"],
+                "qrcode": i["qrcode"],
+                "e_commerce_platform": i["e_commerce_platform"],
+            })
+        if lst_out:
+            return response.json({"data": lst_out, "msg": "{} from db".format(remove_vietnamese_accents(keyword))})
+
+        key_search = "shopee " + keyword
         url_search = "https://www.google.com/search?q={}&tbm=shop&tbs=p_ord:r".format(parse.quote(key_search))
         driver = app.ctx.chrome_driver
         driver.get(url_search)
         soup = BeautifulSoup(driver.page_source, 'html.parser')
         results = soup.find_all('div', class_='sh-dgr__content')
-        lst_out = []
         for index, result in enumerate(results):
             title_tag = result.find(class_="tAxDx")
             description_tag = result.find(class_="vEjMR")
@@ -111,7 +127,7 @@ async def search(req):
                     "qrcode": generate_qr_code(href_value) if href_value else "",
                     "e_commerce_platform": e_commerce_platform,
                 })
-
+        await app.add_task(task_insert_data_crawled(req, remove_vietnamese_accents(keyword), lst_out))
         return response.json({"data": lst_out})
     except Exception as ex:
         print(str(ex))
@@ -119,6 +135,7 @@ async def search(req):
 
 
 if __name__ == "__main__":
+    print("Loading!")
     app.run(host="0.0.0.0", port=app.config.PORT, workers=app.config.WORKER, debug=app.config.DEBUG,
             access_log=app.config.ACCESS_LOG,
-            auto_reload=False)
+            auto_reload=True)
