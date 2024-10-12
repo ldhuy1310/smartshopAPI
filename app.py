@@ -55,6 +55,21 @@ async def count(req):
         return response.json({"Error": str(ex)})
 
 
+@app.route("/products/<id>", methods=["GET"])
+async def product_Detail(req, id):
+    try:
+        lst = []
+        async for i in req.app.ctx.mdb.smart_shop.find({"id": id}).sort([("time_crawled", -1)]):
+            i["_id"] = str(i["_id"])
+            if "time_crawled" in i:
+                i["time_crawled"] = str(i["time_crawled"])
+            lst.append(i)
+        return response.json(lst)
+    except Exception as ex:
+        return response.json({"Error": str(ex)})
+
+
+
 @app.route("/products/<id>", methods=["DELETE"])
 async def del_product(req, id):
     try:

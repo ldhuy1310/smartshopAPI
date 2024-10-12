@@ -45,23 +45,27 @@ def remove_vietnamese_accents(text):
 async def task_insert_data_crawled(req, keyword, items):
     try:
         for i in items:
-            doc = {
-                "id": i["id"],
-                "title": i["title"],
-                "description": i["description"],
-                "img": i["img"],
-                "avg_rating": i["avg_rating"],
-                "total_rating": i["total_rating"],
-                "price": i["price"],
-                "href_value": i["href_value"],
-                "qrcode": i["qrcode"],
-                "e_commerce_platform": i["e_commerce_platform"],
-                "time_crawled": datetime.now(),
-                "keyword": [keyword],
-            }
-            await req.app.ctx.mdb.smart_shop.update_one(
-                {"id": i["id"]},
-                {"$set": doc})
+            try:
+                doc = {
+                    "id": i["id"],
+                    "title": i["title"],
+                    "description": i["description"],
+                    "img": i["img"],
+                    "avg_rating": i["avg_rating"],
+                    "total_rating": i["total_rating"],
+                    "price": i["price"],
+                    "href_value": i["href_value"],
+                    "qrcode": i["qrcode"],
+                    "e_commerce_platform": i["e_commerce_platform"],
+                    "time_crawled": datetime.now(),
+                    "keyword": [keyword],
+                }
+                result = await req.app.ctx.mdb.smart_shop.update_one(
+                    {"id": i["id"]},
+                    {"$set": doc}, upsert=True)
+                print("updated %s document" % result.modified_count, i["id"])
+            except Exception as ex:
+                print(str(ex))
             # await req.app.ctx.mdb.smart_shop.insert_one(doc)
     except Exception as ex:
         print(str(ex))
