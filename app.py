@@ -112,7 +112,8 @@ async def search(req):
             avg_rating = avg_rating_tag.text if avg_rating_tag else ""
             e_commerce_platform = e_commerce_platform_tag.text if e_commerce_platform_tag else ""
             price = price_tag.text if price_tag else ""
-            href_value = href_tag.get('href').replace(u"/url?url=", "") if href_tag else ""
+            href_value = href_tag.get('href').replace(u"/url?url=", "").split("%3F")[0].split("&rct=")[0].replace(
+                "http://www.google.com", "") if href_tag else ""
 
             if title:
                 lst_out.append({
@@ -124,6 +125,7 @@ async def search(req):
                     "total_rating": total_rating,
                     "price": price,
                     "href_value": href_value,
+                    "href_value_origin": href_value,
                     "qrcode": generate_qr_code(href_value) if href_value else "",
                     "e_commerce_platform": e_commerce_platform,
                 })
