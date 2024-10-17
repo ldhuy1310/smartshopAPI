@@ -69,7 +69,6 @@ async def product_Detail(req, id):
         return response.json({"Error": str(ex)})
 
 
-
 @app.route("/products/<id>", methods=["DELETE"])
 async def del_product(req, id):
     try:
@@ -126,6 +125,9 @@ async def search(req):
             description = description_tag.text if description_tag else ""
             avg_rating = avg_rating_tag.text if avg_rating_tag else ""
             e_commerce_platform = e_commerce_platform_tag.text if e_commerce_platform_tag else ""
+            if "shopee" not in e_commerce_platform.lower():
+                continue
+
             price = price_tag.text if price_tag else ""
             href_value = href_tag.get('href').replace(u"/url?url=", "").split("%3F")[0].split("&rct=")[0].replace(
                 "http://www.google.com", "") if href_tag else ""
